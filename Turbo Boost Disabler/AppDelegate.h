@@ -168,8 +168,6 @@
 // Open chart window
 - (void) openChartWindow;
 
-- (float) readCpuFrequency;
-
 
 @property (assign) IBOutlet NSWindow *window;
 

@@ -27,6 +27,7 @@
 #import "AboutWindowController.h"
 #import "StartupHelper.h"
 #import "CheckUpdatesWindowController.h"
+#import "TurboBoostManager.h"
 #import <IOKit/ps/IOPowerSources.h>
 #import <IOKit/ps/IOPSKeys.h>
 #import "Carbon/Carbon.h"
@@ -51,17 +52,25 @@ struct cpusample sample_two;
 // On wake up reinstall the module if needed
 - (void) receiveWakeNote: (NSNotification*) note
 {
-    
+    TurboBoostManager *manager = [TurboBoostManager sharedManager];
+    [manager refreshStatus];
     
     // Reload the module if the current status is on, since OSX enables turbo boost after an
     // undetermined time on sleep / hibernation
-    
-    if ([SystemCommands isModuleLoaded]) {
+    if (!manager.isTurboBoostEnabled) {
+        // Kext is loaded (TB disabled), need to reload to re-disable TB
+        __weak typeof(self) weakSelf = self;
         
-        [self refreshAuthRef];
-        
-        [SystemCommands unLoadModuleWithAuthRef:authorizationRef];
-        [SystemCommands loadModuleWithAuthRef:authorizationRef];
+        // First unload, then load
+        [manager enableTurboBoostWithCompletion:^(BOOL success, NSError * _Nullable error) {
+            if (success) {
+                [manager disableTurboBoostWithCompletion:^(BOOL success, NSError * _Nullable error) {
+                    dispatch_async(dispatch_get_main_queue(), ^{
+                        [weakSelf updateStatus];
+                    });
+                }];
+            }
+        }];
     }
     
     // Add another status bar refresh just to be sure, since depending on mac cpu load it can take a little longer
@@ -141,6 +150,8 @@ struct cpusample sample_two;
     }
     
     [self configureHotKeys];
+    
+    [[TurboBoostManager sharedManager] checkHelperAvailability];
     
     // Init the cpu load samples
     sample_one.totalIdleTime = 0;
@@ -344,8 +355,11 @@ struct cpusample sample_two;
 // Refresh the GUI general status, including enable/disable options, on-off status, cpu & fan reads
 - (void) updateStatus {
     
-    // Check other status
-    isTurboBoostEnabled= ![SystemCommands isModuleLoaded];
+    // Check status from TurboBoostManager (single source of truth)
+    // This ensures consistency when using Helper (XPC) mode
+    isTurboBoostEnabled = [[TurboBoostManager sharedManager] isTurboBoostEnabled];
+    
+    NSLog(@"[AppDelegate] updateStatus: isTurboBoostEnabled=%@", isTurboBoostEnabled ? @"YES" : @"NO");
     
     if (isTurboBoostEnabled) {
         
@@ -399,8 +413,25 @@ struct cpusample sample_two;
         return;
     }
 
-    int fanSpeed = [SystemCommands readCurrentFanSpeed];
-    float cpuTemp = [SystemCommands readCurrentCpuTemp];
+    __weak typeof(self) weakSelf = self;
+    [[TurboBoostManager sharedManager] readSensorsWithCompletion:^(BOOL success, float temperature, float fanSpeed, NSError * _Nullable error) {
+        dispatch_async(dispatch_get_main_queue(), ^{
+            [weakSelf updateSensorUIWithTemperature:temperature fanSpeed:(int)fanSpeed];
+        });
+    }];
+    
+    // CPU Load calculation (doesn't require privileges, can stay synchronous)
+    [self updateCPULoad];
+    
+    // Battery level update
+    [self updateBatteryInfo];
+    
+    // Refresh the title string
+    [self refreshTitleString];
+}
+
+// Helper method to update sensor UI
+- (void) updateSensorUIWithTemperature:(float)cpuTemp fanSpeed:(int)fanSpeed {
     
     // Read the CPU temp
     NSString *tempString = nil;
@@ -420,7 +451,8 @@ struct cpusample sample_two;
         [self updateImageForTemperature:cpuTemp];
         
     } else {
-        [txtCpuTemp setStringValue:@"N/A"];
+        tempString = @"N/A";  // 修复：确保 tempString 不为 nil
+        [txtCpuTemp setStringValue:tempString];
     }
     
     // Read the fan speed
@@ -433,37 +465,23 @@ struct cpusample sample_two;
         [txtCpuFan setStringValue:rpmData];
     }
     
-    // Read the battery level and update info
-    double batteryLevel = [self currentBatteryLevel];
-    if (batteryLevel >= 0) {
-        
-        // 12 levels graphically
-        int batteryLevelValue = ceil(batteryLevel * 0.12f);
-        [batteryLevelIndicator setIntegerValue:batteryLevelValue];
-        
-        if ([self isCharging]) {
-            [lblBatteryInfo setStringValue:[NSString stringWithFormat:@"%d %% 🔌", (int) batteryLevel]];
-        } else {
-            [lblBatteryInfo setStringValue:[NSString stringWithFormat:@"%d %%", (int) batteryLevel]];
-        }
-    }
-    
     // Refresh the chart view if present
-    
     ChartDataEntry *fanEntry = [[ChartDataEntry alloc] init];
     fanEntry.value = fanSpeed;
-    fanEntry.isTbEnabled = isTurboBoostEnabled;
+    fanEntry.isTbEnabled = [[TurboBoostManager sharedManager] isTurboBoostEnabled];
     
     ChartDataEntry *tempEntry = [[ChartDataEntry alloc] init];
     tempEntry.value = cpuTemp;
-    tempEntry.isTbEnabled = isTurboBoostEnabled;
+    tempEntry.isTbEnabled = [[TurboBoostManager sharedManager] isTurboBoostEnabled];
     
     if (self.chartWindowController != nil) {
-        
         [self.chartWindowController addFanEntry:fanEntry withCurrentValue:rpmData];
         [self.chartWindowController addTempEntry:tempEntry withCurrentValue:tempString];
-        
     }
+}
+
+// Helper method to update CPU load
+- (void) updateCPULoad {
     
     double cpuLoadValue = -1;
     // Get the CPU Load
@@ -496,31 +514,51 @@ struct cpusample sample_two;
     ChartDataEntry *cpuLoadEntry = [[ChartDataEntry alloc] init];
     double finalCpuLoadValue = cpuLoadValue > 0 ? cpuLoadValue : 0;
     cpuLoadEntry.value = finalCpuLoadValue;
-    cpuLoadEntry.isTbEnabled = isTurboBoostEnabled;
+    cpuLoadEntry.isTbEnabled = [[TurboBoostManager sharedManager] isTurboBoostEnabled];
         
     if (self.chartWindowController != nil) {
-    
-        [self.chartWindowController addFanEntry:fanEntry withCurrentValue:rpmData];
-        [self.chartWindowController addTempEntry:tempEntry withCurrentValue:tempString];
         if (finalCpuLoadValue > 0) {
             [self.chartWindowController addCpuLoadEntry:cpuLoadEntry withCurrentValue:[NSString stringWithFormat:@"%.01f%%", finalCpuLoadValue]];
         }
-        
-        // Read CPU Freq
-        ChartDataEntry *cpuFreqEntry = [[ChartDataEntry alloc] init];
-        cpuFreqEntry.isTbEnabled = isTurboBoostEnabled;
-        
-        if (self.chartWindowController.isOpen) {
-            cpuFreqEntry.value = [self readCpuFrequency];
-            [self.chartWindowController addCpuFreqEntry:cpuFreqEntry withCurrentValue:[NSString stringWithFormat:@"%.01f Ghz", cpuFreqEntry.value]];
-        } else {
-            cpuFreqEntry.value = -1.0f;
-            [self.chartWindowController addCpuFreqEntry:cpuFreqEntry withCurrentValue:@"N/A"];
-        }
     }
     
-    // Refresh the title string
-    [self refreshTitleString];
+    // Update CPU frequency for chart (async)
+    if (self.chartWindowController != nil && self.chartWindowController.isOpen) {
+        __weak typeof(self) weakSelf = self;
+        [[TurboBoostManager sharedManager] readCPUFrequencyWithCompletion:^(BOOL success, float frequency, NSError * _Nullable error) {
+            dispatch_async(dispatch_get_main_queue(), ^{
+                if (success && frequency > 0) {
+                    ChartDataEntry *cpuFreqEntry = [[ChartDataEntry alloc] init];
+                    cpuFreqEntry.value = frequency;
+                    cpuFreqEntry.isTbEnabled = [[TurboBoostManager sharedManager] isTurboBoostEnabled];
+                    [weakSelf.chartWindowController addCpuFreqEntry:cpuFreqEntry withCurrentValue:[NSString stringWithFormat:@"%.01f Ghz", frequency]];
+                } else {
+                    ChartDataEntry *cpuFreqEntry = [[ChartDataEntry alloc] init];
+                    cpuFreqEntry.value = -1.0f;
+                    cpuFreqEntry.isTbEnabled = [[TurboBoostManager sharedManager] isTurboBoostEnabled];
+                    [weakSelf.chartWindowController addCpuFreqEntry:cpuFreqEntry withCurrentValue:@"N/A"];
+                }
+            });
+        }];
+    }
+}
+
+// Helper method to update battery info
+- (void) updateBatteryInfo {
+    
+    double batteryLevel = [self currentBatteryLevel];
+    if (batteryLevel >= 0) {
+        
+        // 12 levels graphically
+        int batteryLevelValue = ceil(batteryLevel * 0.12f);
+        [batteryLevelIndicator setIntegerValue:batteryLevelValue];
+        
+        if ([self isCharging]) {
+            [lblBatteryInfo setStringValue:[NSString stringWithFormat:@"%d %% 🔌", (int) batteryLevel]];
+        } else {
+            [lblBatteryInfo setStringValue:[NSString stringWithFormat:@"%d %%", (int) batteryLevel]];
+        }
+    }
 }
 
 
@@ -683,23 +721,14 @@ void sample(bool isOne) {
 // Enable / Disable turbo boost depending on current status
 - (void) enableDisableTurboBoost {
     
-    // Enable or disable Turbo Boost depending on current status
-    BOOL isOn = ![SystemCommands isModuleLoaded];
+    TurboBoostManager *manager = [TurboBoostManager sharedManager];
+    [manager refreshStatus];
     
-    if (isOn) {
+    if (manager.isTurboBoostEnabled) {
         [self disableTurboBoost];
     } else {
         [self enableTurboBoost];
     }
-    
-    // Refresh status bar icon
-    [self updateStatus];
-    
-    [self performSelector:@selector(updateStatus) withObject:nil afterDelay:1.0];
-    [self performSelector:@selector(updateStatus) withObject:nil afterDelay:2.5];
-    
-    // It seems that on some machines 2 seconds is not enough!
-    [self performSelector:@selector(updateStatus) withObject:nil afterDelay:5.0];
 }
 
 - (IBAction) exitItemEvent:(id)sender {
@@ -716,19 +745,35 @@ void sample(bool isOne) {
 // Loads the kernel module disabling turbo boost feature
 - (void) disableTurboBoost {
     
-    [self refreshAuthRef];
+    NSLog(@"[AppDelegate] disableTurboBoost called");
     
-    [SystemCommands loadModuleWithAuthRef:authorizationRef];
-    
+    [[TurboBoostManager sharedManager] disableTurboBoostWithCompletion:^(BOOL success, NSError * _Nullable error) {
+        dispatch_async(dispatch_get_main_queue(), ^{
+            if (!success && error) {
+                NSLog(@"[AppDelegate] Failed to disable Turbo Boost: %@", error.localizedDescription);
+            } else {
+                NSLog(@"[AppDelegate] Turbo Boost disabled successfully");
+            }
+            [self updateStatus];
+        });
+    }];
 }
 
 // Unloads the kernel module enabling turbo boost feature
 - (void) enableTurboBoost {
     
-    [self refreshAuthRef];
+    NSLog(@"[AppDelegate] enableTurboBoost called");
     
-    [SystemCommands unLoadModuleWithAuthRef:authorizationRef];
-    
+    [[TurboBoostManager sharedManager] enableTurboBoostWithCompletion:^(BOOL success, NSError * _Nullable error) {
+        dispatch_async(dispatch_get_main_queue(), ^{
+            if (!success && error) {
+                NSLog(@"[AppDelegate] Failed to enable Turbo Boost: %@", error.localizedDescription);
+            } else {
+                NSLog(@"[AppDelegate] Turbo Boost enabled successfully");
+            }
+            [self updateStatus];
+        });
+    }];
 }
 
 // Method to check for updates
@@ -1252,13 +1297,6 @@ OSStatus hotKeyPressedEvent(EventHandlerCallRef theHandlerRef, EventRef theEvent
             NSLog(@"Copy Rights Unsuccessful: %d", status);
         
     }
-}
-
-- (float) readCpuFrequency {
-        
-    [self refreshAuthRef];
-    
-    return [SystemCommands readCurrentCpuFreqWithAuthRef:authorizationRef];
 }
 
 

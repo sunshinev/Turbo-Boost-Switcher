@@ -9,6 +9,10 @@
 /* Begin PBXBuildFile section */
 		4516CCF7192C12B4008A29A3 /* CheckUpdatesWindowController.m in Sources */ = {isa = PBXBuildFile; fileRef = 4516CCF5192C12B4008A29A3 /* CheckUpdatesWindowController.m */; };
 		4516CCF8192C12B4008A29A3 /* CheckUpdatesWindowController.xib in Resources */ = {isa = PBXBuildFile; fileRef = 4516CCF6192C12B4008A29A3 /* CheckUpdatesWindowController.xib */; };
+		45TBMS001234567800AABB01 /* TurboBoostManager.m in Sources */ = {isa = PBXBuildFile; fileRef = 45TBMS001234567800AABB05 /* TurboBoostManager.m */; };
+		45TBMS021234567800AABB02 /* HelperInstallationManager.m in Sources */ = {isa = PBXBuildFile; fileRef = 45TBMS021234567800AABB06 /* HelperInstallationManager.m */; };
+		45TBMS031234567800AABB03 /* HelperStatusMenuController.m in Sources */ = {isa = PBXBuildFile; fileRef = 45TBMS031234567800AABB07 /* HelperStatusMenuController.m */; };
+		45TBMS041234567800AABB04 /* XPCClientWrapper.m in Sources */ = {isa = PBXBuildFile; fileRef = 45TBMS041234567800AABB08 /* XPCClientWrapper.m */; };
 		452252CA192D6801002BACF4 /* icon_cancel.png in Resources */ = {isa = PBXBuildFile; fileRef = 452252C8192D6801002BACF4 /* icon_cancel.png */; };
 		452252CB192D6801002BACF4 /* icon_ok.png in Resources */ = {isa = PBXBuildFile; fileRef = 452252C9192D6801002BACF4 /* icon_ok.png */; };
 		452261B02909DAFC002CF0F9 /* HELP.rtfd in Resources */ = {isa = PBXBuildFile; fileRef = 452261AF2909DAFC002CF0F9 /* HELP.rtfd */; };
@@ -74,6 +78,14 @@
 
 /* Begin PBXFileReference section */
 		450A1F051E7CB3D700EEFD60 /* es */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = es; path = es.lproj/Localizable.strings; sourceTree = "<group>"; };
+		45TBMS001234567800AABB05 /* TurboBoostManager.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TurboBoostManager.h; sourceTree = "<group>"; };
+		45TBMS001234567800AABB05 /* TurboBoostManager.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TurboBoostManager.m; sourceTree = "<group>"; };
+		45TBMS021234567800AABB06 /* HelperInstallationManager.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = HelperInstallationManager.h; sourceTree = "<group>"; };
+		45TBMS021234567800AABB06 /* HelperInstallationManager.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = HelperInstallationManager.m; sourceTree = "<group>"; };
+		45TBMS031234567800AABB07 /* HelperStatusMenuController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = HelperStatusMenuController.h; sourceTree = "<group>"; };
+		45TBMS031234567800AABB07 /* HelperStatusMenuController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = HelperStatusMenuController.m; sourceTree = "<group>"; };
+		45TBMS041234567800AABB08 /* XPCClientWrapper.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = XPCClientWrapper.h; sourceTree = "<group>"; };
+		45TBMS041234567800AABB08 /* XPCClientWrapper.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = XPCClientWrapper.m; sourceTree = "<group>"; };
 		4516CCF4192C12B4008A29A3 /* CheckUpdatesWindowController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CheckUpdatesWindowController.h; sourceTree = "<group>"; };
 		4516CCF5192C12B4008A29A3 /* CheckUpdatesWindowController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = CheckUpdatesWindowController.m; sourceTree = "<group>"; };
 		4516CCF6192C12B4008A29A3 /* CheckUpdatesWindowController.xib */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.xib; path = CheckUpdatesWindowController.xib; sourceTree = "<group>"; };
@@ -239,6 +251,14 @@
 				45A51DAC179B4E0600EEF333 /* smc.h */,
 				457FF240179C31EA0029AA66 /* StartupHelper.h */,
 				457FF241179C31EA0029AA66 /* StartupHelper.m */,
+				45TBMS001234567800AABB05 /* TurboBoostManager.h */,
+				45TBMS001234567800AABB05 /* TurboBoostManager.m */,
+				45TBMS021234567800AABB06 /* HelperInstallationManager.h */,
+				45TBMS021234567800AABB06 /* HelperInstallationManager.m */,
+				45TBMS031234567800AABB07 /* HelperStatusMenuController.h */,
+				45TBMS031234567800AABB07 /* HelperStatusMenuController.m */,
+				45TBMS041234567800AABB08 /* XPCClientWrapper.h */,
+				45TBMS041234567800AABB08 /* XPCClientWrapper.m */,
 				4560CC50179D2397003F3D19 /* AboutWindowController.h */,
 				4560CC51179D2397003F3D19 /* AboutWindowController.m */,
 				4560CC52179D2397003F3D19 /* AboutWindowController.xib */,
@@ -433,6 +453,10 @@
 				45FD6972253A6361000C3AD4 /* HelpWindowController.m in Sources */,
 				457FF242179C31EA0029AA66 /* StartupHelper.m in Sources */,
 				4560CC53179D2397003F3D19 /* AboutWindowController.m in Sources */,
+				45TBMS001234567800AABB01 /* TurboBoostManager.m in Sources */,
+				45TBMS021234567800AABB02 /* HelperInstallationManager.m in Sources */,
+				45TBMS031234567800AABB03 /* HelperStatusMenuController.m in Sources */,
+				45TBMS041234567800AABB04 /* XPCClientWrapper.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

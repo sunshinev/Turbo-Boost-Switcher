@@ -564,11 +564,9 @@ int SMCGetFanSpeed(char *key)
     SMCOpen(&conn);
     
     float temp = 0;
-
     temp = SMCGetTemperature();
     
     SMCClose(conn);
-    
     return temp;
 }
 
