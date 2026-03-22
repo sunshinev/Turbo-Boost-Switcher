@@ -26,15 +26,13 @@
 #import "SystemCommands.h"
 #import "AboutWindowController.h"
 #import "StartupHelper.h"
-#import "CheckUpdatesWindowController.h"
 #import "TurboBoostManager.h"
 #import <IOKit/ps/IOPowerSources.h>
 #import <IOKit/ps/IOPSKeys.h>
-#import "Carbon/Carbon.h"
 
 @implementation AppDelegate
 
-@synthesize aboutWindow, refreshTimer, checkUpdatesWindow, chartWindowController, helpWindow, hotKeysWindowController;
+@synthesize aboutWindow, refreshTimer, chartWindowController;
 
 // Struct to take the cpu samples
 struct cpusample {
@@ -149,31 +147,11 @@ struct cpusample sample_two;
         exit(-1);
     }
     
-    [self configureHotKeys];
-    
     [[TurboBoostManager sharedManager] checkHelperAvailability];
     
     // Init the cpu load samples
     sample_one.totalIdleTime = 0;
     sample_two.totalIdleTime = 0;
-    
-    // Locale init
-    if ([StartupHelper currentLocale] == nil) {
-        
-        // Get the current language
-        NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
-        NSArray *languages = [defaults objectForKey:@"AppleLanguages"];
-        NSString *currentLanguage = [languages objectAtIndex:0];
-        
-        // Save it
-        [StartupHelper storeCurrentLocale:currentLanguage];
-    }
-    
-    // Update languages menú
-    [self updateLanguageMenu];
-    
-    // Init the check for updates helper
-    checkUpdatesHelper = [[CheckUpdatesHelper alloc] init];
     
     // Item to show up on the status bar
     statusItem = [[NSStatusBar systemStatusBar] statusItemWithLength:NSVariableStatusItemLength];
@@ -210,17 +188,9 @@ struct cpusample sample_two;
     [checkDisableAtLaunch setState:[StartupHelper isDisableAtLaunch]];
     [checkDisableAtLaunch setTitle:NSLocalizedString(@"disable_login", nil)];
     
-    // Refresh farenheit / celsius configuration
-    [radioFarenheit setState:[StartupHelper isFarenheit]];
-    [radioCelcius setState:![StartupHelper isFarenheit]];
-    [radioCelcius setFont:[statusMenu font]];
-    [radioFarenheit setFont:[statusMenu font]];
-    
     // Update translations
     [settingsLabel setTitleWithMnemonic:NSLocalizedString(@"settings", nil)];
-    [checkUpdatesItem setTitle:NSLocalizedString(@"updates", nil)];
     [aboutItem setTitle:NSLocalizedString(@"about", nil)];
-    [helpItem setTitle:NSLocalizedString(@"lblHelp", nil)];
     [exitItem setTitle:NSLocalizedString(@"quit", nil)];
     
     // Status strings init
@@ -268,48 +238,7 @@ struct cpusample sample_two;
     // Subscribe to sleep and wake up notifications
     [self fileNotifications];
     
-    // Check for updates
-    if ([StartupHelper isCheckUpdatesOnStart]) {
-        [checkUpdatesHelper checkUpdatesWithDelegate:(id) self];
-    }
-    
-    // Check run count and if mod 10, suggets going pro if the user don't answered "never shot this again" :).
-    if (![StartupHelper neverShowProMessage]) {
-        if (([StartupHelper runCount] % 10) == 0) {
-            
-            NSAlert *alert = [[NSAlert alloc] init];
-            
-            [alert addButtonWithTitle:NSLocalizedString(@"alert_later", nil)];
-            [alert addButtonWithTitle:NSLocalizedString(@"alert_never_show_again", nil)];
-            [alert addButtonWithTitle:NSLocalizedString(@"btn_pro",nil)];
-            
-            [alert setMessageText:NSLocalizedString(@"alert_text", nil)];
-            [alert setInformativeText:NSLocalizedString(@"alert_informative_text", nil)];
-            
-            [alert setAlertStyle:NSWarningAlertStyle];
-            
-            NSModalResponse modalResponse = [alert runModal];
-            
-            if (modalResponse == NSAlertSecondButtonReturn) {
-                
-                // Never show again clicked
-                [StartupHelper storeNeverShowProMessage:YES];
-                
-            } else if (modalResponse == NSAlertThirdButtonReturn) {
-                
-                // Go pro!
-                [[NSWorkspace sharedWorkspace] openURL:[NSURL URLWithString:@"https://gumroad.com/l/YeBQUF"]];
-                    
-            }
-        }
-        
-        // Save the current count
-        int currentCount = (int)[StartupHelper runCount];
-        [StartupHelper storeRunCount:(currentCount + 1)];
-    }
-
     // Configure sensors view
-    [self configureSensorsView];
     
     // Update monitoring state depending on monitoring enabled / disabled
     [self updateMonitoringState];
@@ -335,24 +264,7 @@ struct cpusample sample_two;
     }
 }
 
-// Method to refresh the temperature image sensor depending on temperture
-- (void) updateImageForTemperature:(int) temp {
-    
-    if (temp <= 60) {
-        [temperatureImage setImage:[NSImage imageNamed:@"temperature_1.png"]];
-    } else if (temp < 70) {
-        [temperatureImage setImage:[NSImage imageNamed:@"temperature_2.png"]];
-    } else if (temp < 80) {
-        [temperatureImage setImage:[NSImage imageNamed:@"temperature_3.png"]];
-    } else if (temp < 90) {
-        [temperatureImage setImage:[NSImage imageNamed:@"temperature_4.png"]];
-    } else {
-        [temperatureImage setImage:[NSImage imageNamed:@"temperature_5.png"]];
-    }
-    
-}
-
-// Refresh the GUI general status, including enable/disable options, on-off status, cpu & fan reads
+// Refresh the GUI general status, including enable/disable options, on-off status
 - (void) updateStatus {
     
     // Check status from TurboBoostManager (single source of truth)
@@ -423,46 +335,26 @@ struct cpusample sample_two;
     // CPU Load calculation (doesn't require privileges, can stay synchronous)
     [self updateCPULoad];
     
-    // Battery level update
-    [self updateBatteryInfo];
-    
     // Refresh the title string
     [self refreshTitleString];
 }
 
-// Helper method to update sensor UI
+// Helper method to update sensor UI (only for chart data)
 - (void) updateSensorUIWithTemperature:(float)cpuTemp fanSpeed:(int)fanSpeed {
     
-    // Read the CPU temp
+    // Build display strings for chart
     NSString *tempString = nil;
-    
     if (cpuTemp > 0) {
-        
-        if ([radioCelcius state]) {
-            tempString = [NSString stringWithFormat:@"%.00f ºC", cpuTemp];
-            [txtCpuTemp setStringValue:tempString];
-        } else {
-            float fCpuTemp = [self fahrenheitValue:cpuTemp];
-            tempString = [NSString stringWithFormat:@"%.00f ºF", fCpuTemp];
-            [txtCpuTemp setStringValue:tempString];
-        }
-        
-        // Update temperature image
-        [self updateImageForTemperature:cpuTemp];
-        
+        tempString = [NSString stringWithFormat:@"%.00f ºC", cpuTemp];
     } else {
-        tempString = @"N/A";  // 修复：确保 tempString 不为 nil
-        [txtCpuTemp setStringValue:tempString];
+        tempString = @"N/A";
     }
     
-    // Read the fan speed
     NSString *rpmData = nil;
     if (fanSpeed > 0) {
         rpmData = [NSString stringWithFormat:@"%d rpm", fanSpeed];
-        [txtCpuFan setStringValue:rpmData];
     } else {
         rpmData = @"N/A";
-        [txtCpuFan setStringValue:rpmData];
     }
     
     // Refresh the chart view if present
@@ -470,12 +362,12 @@ struct cpusample sample_two;
     NSLog(@"[AppDelegate] updateSensorUI: isTbEnabled=%@", isTbEnabled ? @"YES" : @"NO");
     
     if (self.chartWindowController != nil) {
-        [self.chartWindowController addFanEntry:fanSpeed withCurrentValue:rpmData isTbEnabled:isTbEnabled];
+        // Note: Fan chart is being removed, only temp is sent
         [self.chartWindowController addTempEntry:cpuTemp withCurrentValue:tempString isTbEnabled:isTbEnabled];
     }
 }
 
-// Helper method to update CPU load
+// Helper method to update CPU load (for chart data)
 - (void) updateCPULoad {
     
     double cpuLoadValue = -1;
@@ -500,12 +392,9 @@ struct cpusample sample_two;
         
         double cpuIdleValue = (double)delta.totalIdleTime/(double)onePercent;
         cpuLoadValue = 100.0 - cpuIdleValue;
-        
-        [txtCpuLoad setStringValue:[NSString stringWithFormat:@"CPU Load: %.01f%%", cpuLoadValue]];
-        
     }
     
-    // 2.12.0 - Cpu load entry
+    // Update chart with CPU load data
     double finalCpuLoadValue = cpuLoadValue > 0 ? cpuLoadValue : 0;
     BOOL isTbEnabled = [[TurboBoostManager sharedManager] isTurboBoostEnabled];
     NSLog(@"[AppDelegate] updateCPULoad: isTbEnabled=%@", isTbEnabled ? @"YES" : @"NO");
@@ -532,25 +421,6 @@ struct cpusample sample_two;
     }
 }
 
-// Helper method to update battery info
-- (void) updateBatteryInfo {
-    
-    double batteryLevel = [self currentBatteryLevel];
-    if (batteryLevel >= 0) {
-        
-        // 12 levels graphically
-        int batteryLevelValue = ceil(batteryLevel * 0.12f);
-        [batteryLevelIndicator setIntegerValue:batteryLevelValue];
-        
-        if ([self isCharging]) {
-            [lblBatteryInfo setStringValue:[NSString stringWithFormat:@"%d %% 🔌", (int) batteryLevel]];
-        } else {
-            [lblBatteryInfo setStringValue:[NSString stringWithFormat:@"%d %%", (int) batteryLevel]];
-        }
-    }
-}
-
-
 // Take one cpu sample
 void sample(bool isOne) {
     
@@ -574,131 +444,6 @@ void sample(bool isOne) {
         sample_two.totalUserTime = loadInfoData.cpu_ticks[CPU_STATE_USER] + loadInfoData.cpu_ticks[CPU_STATE_NICE];
         sample_two.totalIdleTime = loadInfoData.cpu_ticks[CPU_STATE_IDLE];
     }
-    
-}
-
-// Update language menu
-- (void) updateLanguageMenu {
-    
-    NSString *currentLocale = [StartupHelper currentLocale];
-    
-    [spanishMenu setState:NSOffState];
-    [englishMenu setState:NSOffState];
-    [frenchMenu setState:NSOffState];
-    [chineseMenu setState:NSOffState];
-    [germanMenu setState:NSOffState];
-    [polishMenu setState:NSOffState];
-    [russianMenu setState:NSOffState];
-    [swedishMenu setState:NSOffState];
-    [czechMenu setState:NSOffState];
-    [italianMenu setState:NSOffState];
-    
-    // TODO: Change this to a nsmutabledict
-    if ([currentLocale rangeOfString:@"es"].location != NSNotFound) {
-        [spanishMenu setState:NSOnState];
-    } else if ([currentLocale rangeOfString:@"en"].location != NSNotFound) {
-        [englishMenu setState:NSOnState];
-    } else if ([currentLocale rangeOfString:@"fr"].location != NSNotFound) {
-        [frenchMenu setState:NSOnState];
-    } else if ([currentLocale rangeOfString:@"cn"].location != NSNotFound) {
-        [chineseMenu setState:NSOnState];
-    } else if ([currentLocale rangeOfString:@"de"].location != NSNotFound) {
-        [germanMenu setState:NSOnState];
-    } else if ([currentLocale rangeOfString:@"pl"].location != NSNotFound) {
-        [polishMenu setState:NSOnState];
-    } else if ([currentLocale rangeOfString:@"ru"].location != NSNotFound) {
-        [russianMenu setState:NSOnState];
-    } else if ([currentLocale rangeOfString:@"sv"].location != NSNotFound) {
-        [swedishMenu setState:NSOnState];
-    } else if ([currentLocale rangeOfString:@"cs"].location != NSNotFound) {
-        [czechMenu setState:NSOnState];
-    } else if ([currentLocale rangeOfString:@"it"].location != NSNotFound) {
-        [italianMenu setState:NSOnState];
-    }
-    
-    // Update language translations
-    [languageMenu setTitle:NSLocalizedString(@"language", nil)];
-    [spanishMenu setTitle:NSLocalizedString(@"language_es", nil)];
-    [englishMenu setTitle:NSLocalizedString(@"language_en", nil)];
-    [frenchMenu setTitle:NSLocalizedString(@"language_fr", nil)];
-    [chineseMenu setTitle:NSLocalizedString(@"language_zh", nil)];
-    [germanMenu setTitle:NSLocalizedString(@"language_de", nil)];
-    [polishMenu setTitle:NSLocalizedString(@"language_pl", nil)];
-    [russianMenu setTitle:NSLocalizedString(@"language_ru", nil)];
-    [swedishMenu setTitle:NSLocalizedString(@"language_sv", nil)];
-    [czechMenu setTitle:NSLocalizedString(@"language_cs", nil)];
-    [italianMenu setTitle:NSLocalizedString(@"language_it", nil)];
-}
-
-// Change language to
-- (void) changeLanguageTo:(NSString *) value {
-    
-    [StartupHelper storeCurrentLocale:value];
-    
-    // AppleLanguages
-    [[NSUserDefaults standardUserDefaults] setObject:[NSArray arrayWithObjects:value, nil] forKey:@"AppleLanguages"];
-    [[NSUserDefaults standardUserDefaults] synchronize];
-    
-}
-
-// Language changed
-- (IBAction) languageChanged:(id)sender {
-    
-    // Asks for user confirmation
-    NSAlert *alert = [[NSAlert alloc] init];
-    [alert addButtonWithTitle:@"OK"];
-    [alert addButtonWithTitle:NSLocalizedString(@"btn_close", nil)];
-    [alert setMessageText:NSLocalizedString(@"language_change_confirmation", nil)];
-    [alert setInformativeText:NSLocalizedString(@"language_change_informative_text", nil)];
-    [alert setAlertStyle:NSWarningAlertStyle];
-    
-    if ([alert runModal] == NSAlertFirstButtonReturn) {
-        
-        // OK clicked... TODO: Change this to a nsmutabledict
-        if ([sender isEqualTo:spanishMenu]) {
-            [self changeLanguageTo:@"es"];
-        } else if ([sender isEqualTo:englishMenu]) {
-            [self changeLanguageTo:@"en"];
-        } else if ([sender isEqualTo:frenchMenu]) {
-            [self changeLanguageTo:@"fr"];
-        } else if ([sender isEqualTo:chineseMenu]) {
-            [self changeLanguageTo:@"zh"];
-        } else if ([sender isEqualTo:germanMenu]) {
-            [self changeLanguageTo:@"de"];
-        } else if ([sender isEqualTo:polishMenu]) {
-            [self changeLanguageTo:@"pl"];
-        } else if ([sender isEqualTo:russianMenu]) {
-            [self changeLanguageTo:@"ru"];
-        } else if ([sender isEqualTo:swedishMenu]) {
-            [self changeLanguageTo:@"sv"];
-        } else if ([sender isEqualTo:czechMenu]) {
-            [self changeLanguageTo:@"cs"];
-        } else if ([sender isEqualTo:italianMenu]) {
-            [self changeLanguageTo:@"it"];
-        }
-        
-        [self updateLanguageMenu];
-        
-        // Relaunch the app
-        [self relaunchAfterDelay:1];
-        
-    }
-}
-
-// Opens help window
-- (IBAction) help:(id)sender {
-    
-    // Bring window to front
-    [NSApp activateIgnoringOtherApps:YES];
-    
-    if (self.helpWindow == nil) {
-        // Init the help window
-        self.helpWindow = [[HelpWindowController alloc] initWithWindowNibName:@"HelpWindowController"];
-    }
-    
-    [self.helpWindow.window setLevel:NSStatusWindowLevel];
-    [self.helpWindow.window center];
-    [self.helpWindow showWindow:nil];
     
 }
 
@@ -765,21 +510,6 @@ void sample(bool isOne) {
     }];
 }
 
-// Method to check for updates
-- (IBAction) checkForUpdates:(id)sender {
-    
-    // Download the update opening the CheckUpdates Window Controller
-    if (self.checkUpdatesWindow == nil) {
-        self.checkUpdatesWindow = [[CheckUpdatesWindowController alloc] initWithWindowNibName:@"CheckUpdatesWindowController"];
-    }
-    
-    [self.checkUpdatesWindow.window setLevel:NSStatusWindowLevel];
-    [self.checkUpdatesWindow.window center];
-    [self.checkUpdatesWindow showWindow:nil];
-    [self.checkUpdatesWindow checkVersion];
-    
-}
-
 // Open about window
 - (IBAction) about:(id)sender {
     if (self.aboutWindow == nil) {
@@ -805,30 +535,6 @@ void sample(bool isOne) {
 - (IBAction) disableAtLogin:(id)sender {
     
     [StartupHelper setDisableAtLaunch:[checkDisableAtLaunch state]];
-}
-
-// Error
-- (void) errorCheckingUpdate {
-    
-}
-
-// Update available
-- (void) updateAvailable {
-    
-    // Download the update opening the CheckUpdates Window Controller
-    if (self.checkUpdatesWindow == nil) {
-        self.checkUpdatesWindow = [[CheckUpdatesWindowController alloc] initWithWindowNibName:@"CheckUpdatesWindowController"];
-    }
-    
-    [self.checkUpdatesWindow.window setLevel:NSStatusWindowLevel];
-    [self.checkUpdatesWindow.window center];
-    [self.checkUpdatesWindow showWindow:nil];
-    [self.checkUpdatesWindow updateAvailable];
-}
-
-// Update not available
-- (void) updateNotAvailable {
-    
 }
 
 // Method to refresh the status bar title string
@@ -917,8 +623,6 @@ void sample(bool isOne) {
         [self.chartWindowController initData];
     }
     
-    self.chartWindowController.isFahrenheit = [StartupHelper isFarenheit];
-    
     // Show!
     [self.chartWindowController.window setLevel:NSStatusWindowLevel];
     [self.chartWindowController.window center];
@@ -998,22 +702,6 @@ void sample(bool isOne) {
     return -1.0f;
 }
 
-// Method to configure the sensors view depending on battery available or not
-- (void) configureSensorsView {
-    
-    double batteryLevel = [self currentBatteryLevel];
-    if (batteryLevel < 0) {
-        
-        // Hide battery sensor
-        NSRect f = sensorsView.frame;
-        f.size.height = 43;
-        sensorsView.frame = f;
-        [sensorsView setNeedsLayout:YES];
-        
-    }
-    
-}
-
 - (IBAction) checkMonitoringClick:(id) sender {
     [StartupHelper storeMonitoringEnabled:[checkMonitoring state] == NSOnState];
     [self updateMonitoringState];
@@ -1032,27 +720,7 @@ void sample(bool isOne) {
         // Refresh title string and status bar
         [self updateSensorValues];
         
-        // Disable monitoring menu options
-        [temperatureImage setAlphaValue:1.0];
-        [cpuLoadImage setAlphaValue:1.0];
-        [cpuFanImage setAlphaValue:1.0];
-        [batteryImage setAlphaValue:1.0];
-        
     } else {
-        
-        // Disable monitoring menu options
-        [temperatureImage setAlphaValue:0.2];
-        [cpuLoadImage setAlphaValue:0.2];
-        [cpuFanImage setAlphaValue:0.2];
-        [batteryImage setAlphaValue:0.2];
-        
-        [txtCpuFan setStringValue:@""];
-        [txtCpuLoad setStringValue:@""];
-        [txtCpuTemp setStringValue:@""];
-        
-        // Set battery level to 0
-        [batteryLevelIndicator setIntegerValue:0];
-        [lblBatteryInfo setStringValue:@""];
         
         [self updateStatus];
         
@@ -1063,208 +731,10 @@ void sample(bool isOne) {
     // Enable/Disable charts
     [chartsMenuItem setEnabled:isMonitoringEnabled];
     
-    // Deshabilitar / ocultar las opciones de monitorización
+    // Disable refresh time slider
     [sliderRefreshTime setEnabled:isMonitoringEnabled];
     
- }
-
-// Method to conifgure hot keys
-- (void) configureHotKeys {
-    
-    hotKeysDict = [[NSMutableDictionary alloc] initWithCapacity:10];
-    [hotKeysDict setObject:[NSNumber numberWithInt:kVK_ANSI_A] forKey:@"A"];
-    [hotKeysDict setObject:[NSNumber numberWithInt:kVK_ANSI_B] forKey:@"B"];
-    [hotKeysDict setObject:[NSNumber numberWithInt:kVK_ANSI_C] forKey:@"C"];
-    [hotKeysDict setObject:[NSNumber numberWithInt:kVK_ANSI_D] forKey:@"D"];
-    [hotKeysDict setObject:[NSNumber numberWithInt:kVK_ANSI_E] forKey:@"E"];
-    [hotKeysDict setObject:[NSNumber numberWithInt:kVK_ANSI_F] forKey:@"F"];
-    [hotKeysDict setObject:[NSNumber numberWithInt:kVK_ANSI_G] forKey:@"G"];
-    [hotKeysDict setObject:[NSNumber numberWithInt:kVK_ANSI_H] forKey:@"H"];
-    [hotKeysDict setObject:[NSNumber numberWithInt:kVK_ANSI_I] forKey:@"I"];
-    [hotKeysDict setObject:[NSNumber numberWithInt:kVK_ANSI_J] forKey:@"J"];
-    [hotKeysDict setObject:[NSNumber numberWithInt:kVK_ANSI_K] forKey:@"K"];
-    [hotKeysDict setObject:[NSNumber numberWithInt:kVK_ANSI_L] forKey:@"L"];
-    [hotKeysDict setObject:[NSNumber numberWithInt:kVK_ANSI_M] forKey:@"M"];
-    [hotKeysDict setObject:[NSNumber numberWithInt:kVK_ANSI_N] forKey:@"N"];
-    [hotKeysDict setObject:[NSNumber numberWithInt:kVK_ANSI_O] forKey:@"O"];
-    [hotKeysDict setObject:[NSNumber numberWithInt:kVK_ANSI_P] forKey:@"P"];
-    [hotKeysDict setObject:[NSNumber numberWithInt:kVK_ANSI_Q] forKey:@"Q"];
-    [hotKeysDict setObject:[NSNumber numberWithInt:kVK_ANSI_R] forKey:@"R"];
-    [hotKeysDict setObject:[NSNumber numberWithInt:kVK_ANSI_S] forKey:@"S"];
-    [hotKeysDict setObject:[NSNumber numberWithInt:kVK_ANSI_T] forKey:@"T"];
-    [hotKeysDict setObject:[NSNumber numberWithInt:kVK_ANSI_U] forKey:@"U"];
-    [hotKeysDict setObject:[NSNumber numberWithInt:kVK_ANSI_V] forKey:@"V"];
-    [hotKeysDict setObject:[NSNumber numberWithInt:kVK_ANSI_W] forKey:@"W"];
-    [hotKeysDict setObject:[NSNumber numberWithInt:kVK_ANSI_X] forKey:@"X"];
-    [hotKeysDict setObject:[NSNumber numberWithInt:kVK_ANSI_Y] forKey:@"Y"];
-    [hotKeysDict setObject:[NSNumber numberWithInt:kVK_ANSI_Z] forKey:@"Z"];
-    
-    EventTypeSpec eventTypeSpec;
-    
-    eventTypeSpec.eventKind=kEventHotKeyPressed;
-    eventTypeSpec.eventClass=kEventClassKeyboard;
-    
-    InstallApplicationEventHandler(&hotKeyPressedEvent, 1, &eventTypeSpec, (__bridge void *) self, NULL);
-    
-    [self enableDisableHotKey];
-    
 }
-
-// Hotkey handler
-OSStatus hotKeyPressedEvent(EventHandlerCallRef theHandlerRef, EventRef theEventRef, void *userData)
-{
-    
-    // The event hot key
-    EventHotKeyID eventHotKeyId;
-    
-    GetEventParameter(theEventRef, kEventParamDirectObject, typeEventHotKeyID, NULL, sizeof(eventHotKeyId), NULL, &eventHotKeyId);
-    AppDelegate *delegate = (__bridge AppDelegate *) userData;
-    
-    int theId = eventHotKeyId.id;
-    
-    // Check hot key pressed - enable / disable TB
-    if ((theId == 1) && (eventHotKeyId.signature == 'hktb')) {
-        [delegate enableDisableTurboBoost];
-        return noErr;
-    }
-    
-    // Check hot key for show charting
-    if ((theId == 2) && (eventHotKeyId.signature == 'hkcw')) {
-        [delegate openChartWindow];
-        return noErr;
-    }
-    
-    return noErr;
-}
-
-// Method called when the temp settings is changed
-- (IBAction) changedTempDisplay:(id)sender {
-    [StartupHelper storeIsFarenheit:[radioFarenheit state]];
-    [self updateSensorValues];
-}
-
-- (IBAction)hotKeysPressed:(id)sender {
-    
-    // Bring window to front
-    [NSApp activateIgnoringOtherApps:YES];
-    if (self.hotKeysWindowController == nil) {
-        // Init the about window
-        self.hotKeysWindowController = [[HotKeysWindowController alloc] initWithWindowNibName:@"HotKeysWindowController"];
-    }
-    
-    [self.hotKeysWindowController.window center];
-    self.hotKeysWindowController.delegate = self;
-    [self.hotKeysWindowController.window setLevel:NSStatusWindowLevel];
-    [self.hotKeysWindowController showWindow:nil];
-}
-
-// Enable - Disable hotkey
-- (void) enableDisableHotKey {
-    
-    BOOL hotKeysEnabled = [StartupHelper isHotKeysEnabled];
-    
-    if (!hotKeysEnabled) {
-        
-        [chartsMenuItem setKeyEquivalent:@""];
-        [chartsMenuItem setKeyEquivalentModifierMask:0];
-        
-        [enableDisableItem setKeyEquivalent:@""];
-        [enableDisableItem setKeyEquivalentModifierMask:0];
-        
-        if (turboBoostHotKeyRef != nil) {
-            UnregisterEventHotKey(turboBoostHotKeyRef);
-        }
-        
-        if (chartHotKeyRef != nil) {
-            UnregisterEventHotKey(chartHotKeyRef);
-        }
-    } else {
-        
-        NSMutableArray *tbConfig = [StartupHelper turboBoostHotKey];
-        NSMutableArray *chartConfig = [StartupHelper chartHotKey];
-        
-        BOOL ctrl = [[tbConfig objectAtIndex:0] isEqualToString:@"1"];
-        BOOL shift = [[tbConfig objectAtIndex:1] isEqualToString:@"1"];
-        BOOL cmd = [[tbConfig objectAtIndex:2] isEqualToString:@"1"];
-        NSString *key = [tbConfig objectAtIndex:3];
-        
-        [self refreshTurboHotKey:ctrl withShift:shift andCmd:cmd forKey:key];
-        
-        ctrl = [[chartConfig objectAtIndex:0] isEqualToString:@"1"];
-        shift = [[chartConfig objectAtIndex:1] isEqualToString:@"1"];
-        cmd = [[chartConfig objectAtIndex:2] isEqualToString:@"1"];
-        key = [chartConfig objectAtIndex:3];
-        
-        [self refreshChartingHotKey:ctrl withShift:shift andCmd:cmd forKey:key];
-        
-    }
-}
-
-// Refresh turbo boost hotkey
-- (void) refreshTurboHotKey:(BOOL) ctrl withShift:(BOOL) shift andCmd:(BOOL) cmd forKey:(NSString *) key {
-    
-    if (turboBoostHotKeyRef != nil) {
-        UnregisterEventHotKey(turboBoostHotKeyRef);
-    }
-    
-    // Register Cmd+E for enable / disable Turbo Boost
-    EventHotKeyID eventHotKeyId;
-    eventHotKeyId.signature='hktb';
-    eventHotKeyId.id=1;
-    UInt32 keys = 0;
-    UInt32 modifierKeyMask = 0;
-    if (shift) {
-        keys += shiftKey;
-        modifierKeyMask += NSShiftKeyMask;
-    }
-    if (cmd) {
-        keys += cmdKey;
-        modifierKeyMask +=  NSCommandKeyMask;
-    }
-    if (ctrl) {
-        keys += controlKey;
-        modifierKeyMask += NSControlKeyMask;
-    }
-    
-    RegisterEventHotKey([[hotKeysDict objectForKey:key] unsignedIntValue], keys, eventHotKeyId, GetApplicationEventTarget(), 0, &turboBoostHotKeyRef);
-    
-    [enableDisableItem setKeyEquivalent:[key lowercaseString]];
-    [enableDisableItem setKeyEquivalentModifierMask:modifierKeyMask];
-}
-
-// Refresh charting hotkey
-- (void) refreshChartingHotKey:(BOOL) ctrl withShift:(BOOL) shift andCmd:(BOOL) cmd forKey:(NSString *) key {
-    
-    if (chartHotKeyRef != nil) {
-        UnregisterEventHotKey(chartHotKeyRef);
-    }
-    
-    // Register Ctrl+Cmd+P for shwowing charting window
-    EventHotKeyID eventHotKeyId;
-    eventHotKeyId.signature='hkcw';
-    eventHotKeyId.id=2;
-    UInt32 modifierKeyMask = 0;
-    UInt32 keys = 0;
-    if (shift) {
-        keys += shiftKey;
-        modifierKeyMask += NSShiftKeyMask;
-    }
-    if (cmd) {
-        keys += cmdKey;
-        modifierKeyMask +=  NSCommandKeyMask;
-    }
-    if (ctrl) {
-        keys += controlKey;
-        modifierKeyMask += NSControlKeyMask;
-    }
-    
-    RegisterEventHotKey([[hotKeysDict objectForKey:key] unsignedIntValue] , keys, eventHotKeyId, GetApplicationEventTarget(), 0, &chartHotKeyRef);
-    
-    [chartsMenuItem setKeyEquivalent:[key lowercaseString]];
-    [chartsMenuItem setKeyEquivalentModifierMask:modifierKeyMask];
-}
-
-// 2.12.0 - Refresh auth ref
 - (void) refreshAuthRef {
     
     if (authorizationRef == NULL) {

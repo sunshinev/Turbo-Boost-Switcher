@@ -37,13 +37,11 @@
     NSLog(@"[ChartWindowController] baseFreq: %.2f", baseFreq);
     
     NSString *tempTitle = NSLocalizedString(@"lblTemperature", nil);
-    NSString *fanTitle = NSLocalizedString(@"lblFanSpeed", nil);
     NSString *cpuLoadTitle = NSLocalizedString(@"lblCpuLoad", nil);
     NSString *cpuFreqTitle = NSLocalizedString(@"lblCpuFreq", nil);
     
     [self.chartManager createChartView:self.window.contentView
                             tempTitle:tempTitle
-                             fanTitle:fanTitle
                         cpuLoadTitle:cpuLoadTitle
                         cpuFreqTitle:cpuFreqTitle
                             baseFreq:baseFreq];
@@ -62,12 +60,6 @@
 - (void)addTempEntry:(double)value withCurrentValue:(NSString *)strValue isTbEnabled:(BOOL)isTbEnabled {
     if (self.isOpen && self.chartManager) {
         [self.chartManager addTempEntry:value currentValue:strValue isTbEnabled:isTbEnabled];
-    }
-}
-
-- (void)addFanEntry:(double)value withCurrentValue:(NSString *)strValue isTbEnabled:(BOOL)isTbEnabled {
-    if (self.isOpen && self.chartManager) {
-        [self.chartManager addFanEntry:value currentValue:strValue isTbEnabled:isTbEnabled];
     }
 }
 

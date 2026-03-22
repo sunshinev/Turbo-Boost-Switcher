@@ -58,7 +58,6 @@ struct ChartEntry: Identifiable {
 
 enum ChartType: Int {
     case temperature = 0
-    case fanSpeed = 1
     case cpuLoad = 2
     case cpuFrequency = 3
 }
@@ -94,9 +93,9 @@ struct LineChartView: View {
             if dataSet.entries.isEmpty {
                 ZStack {
                     Rectangle()
-                        .fill(Color.secondary.opacity(0.1))
+                        .fill(Color.gray.opacity(0.1))
                     Text("No data")
-                        .foregroundStyle(.secondary)
+                        .foregroundColor(.secondary)
                 }
                 .frame(height: 170)
             } else {
@@ -105,7 +104,7 @@ struct LineChartView: View {
             }
         }
         .padding()
-        .background(Color(nsColor: .controlBackgroundColor))
+        .background(Color(NSColor.controlBackgroundColor))
         .clipShape(RoundedRectangle(cornerRadius: 8))
     }
 }
@@ -226,8 +225,6 @@ class ChartNSView: NSView {
         switch chartType {
         case .temperature:
             return String(format: "%.0f°", value)
-        case .fanSpeed:
-            return String(format: "%.0f", value)
         case .cpuLoad:
             return String(format: "%.0f%%", value)
         case .cpuFrequency:
@@ -252,7 +249,6 @@ struct LegendItem: View {
 
 struct ChartContainerView: View {
     @ObservedObject var tempDataSet: ChartDataSet
-    @ObservedObject var fanDataSet: ChartDataSet
     @ObservedObject var cpuLoadDataSet: ChartDataSet
     @ObservedObject var cpuFreqDataSet: ChartDataSet
     
@@ -264,7 +260,6 @@ struct ChartContainerView: View {
             }
             
             HStack(spacing: 16) {
-                LineChartView(dataSet: fanDataSet)
                 LineChartView(dataSet: cpuFreqDataSet)
             }
             
@@ -281,13 +276,11 @@ struct ChartContainerView: View {
 @objc public class SwiftUIChartManager: NSObject {
     private var hostingView: NSHostingView<ChartContainerView>?
     private var tempDataSet: ChartDataSet?
-    private var fanDataSet: ChartDataSet?
     private var cpuLoadDataSet: ChartDataSet?
     private var cpuFreqDataSet: ChartDataSet?
     
     @objc public func createChartView(_ containerView: NSView,
                                         tempTitle: String,
-                                        fanTitle: String,
                                         cpuLoadTitle: String,
                                         cpuFreqTitle: String,
                                         baseFreq: Float) {
@@ -299,10 +292,6 @@ struct ChartContainerView: View {
             self.tempDataSet?.maxValue = 100
             self.tempDataSet?.minValue = 0
             
-            self.fanDataSet = ChartDataSet(chartType: 1, title: fanTitle)
-            self.fanDataSet?.maxValue = 7000
-            self.fanDataSet?.minValue = 0
-            
             self.cpuLoadDataSet = ChartDataSet(chartType: 2, title: cpuLoadTitle)
             self.cpuLoadDataSet?.maxValue = 100
             self.cpuLoadDataSet?.minValue = 0
@@ -313,7 +302,6 @@ struct ChartContainerView: View {
             self.cpuFreqDataSet?.minValue = 0
             
             guard let temp = self.tempDataSet,
-                  let fan = self.fanDataSet,
                   let cpuLoad = self.cpuLoadDataSet,
                   let cpuFreq = self.cpuFreqDataSet else {
                 print("[SwiftUIChartManager] ERROR: Failed to create data sets")
@@ -322,7 +310,6 @@ struct ChartContainerView: View {
             
             let chartView = ChartContainerView(
                 tempDataSet: temp,
-                fanDataSet: fan,
                 cpuLoadDataSet: cpuLoad,
                 cpuFreqDataSet: cpuFreq
             )
@@ -347,10 +334,6 @@ struct ChartContainerView: View {
         tempDataSet?.addEntry(value: value, currentValue: currentValue, isTbEnabled: isTbEnabled)
     }
     
-    @objc public func addFanEntry(_ value: Double, currentValue: String, isTbEnabled: Bool) {
-        fanDataSet?.addEntry(value: value, currentValue: currentValue, isTbEnabled: isTbEnabled)
-    }
-    
     @objc public func addCpuLoadEntry(_ value: Double, currentValue: String, isTbEnabled: Bool) {
         cpuLoadDataSet?.addEntry(value: value, currentValue: currentValue, isTbEnabled: isTbEnabled)
     }
@@ -362,7 +345,6 @@ struct ChartContainerView: View {
     
     @objc public func clearAllData() {
         tempDataSet?.clearEntries()
-        fanDataSet?.clearEntries()
         cpuLoadDataSet?.clearEntries()
         cpuFreqDataSet?.clearEntries()
         print("[SwiftUIChartManager] All chart data cleared")

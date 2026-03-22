@@ -14,7 +14,6 @@
 @property (nonatomic) BOOL isFahrenheit;
 
 - (void) addTempEntry:(double)value withCurrentValue:(NSString *)strValue isTbEnabled:(BOOL)isTbEnabled;
-- (void) addFanEntry:(double)value withCurrentValue:(NSString *)strValue isTbEnabled:(BOOL)isTbEnabled;
 - (void) addCpuLoadEntry:(double)value withCurrentValue:(NSString *)strValue isTbEnabled:(BOOL)isTbEnabled;
 - (void) addCpuFreqEntry:(double)value withCurrentValue:(NSString *)strValue isTbEnabled:(BOOL)isTbEnabled;
 
