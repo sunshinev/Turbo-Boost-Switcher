@@ -79,9 +79,10 @@ public class SMCManager {
                             .replacingOccurrences(of: "(", with: "")
                             .replacingOccurrences(of: " Mhz)", with: "")
                             .replacingOccurrences(of: ")", with: "")
-                        if let freq = Float(numStr) {
-                            print("[SMCManager] Frequency read success: \(freq) MHz")
-                            return SMCReadResponse(success: true, value: freq)
+                        if let freqMHz = Float(numStr) {
+                            let freqGHz = freqMHz / 1000.0
+                            print("[SMCManager] Frequency read success: \(freqMHz) MHz = \(freqGHz) GHz")
+                            return SMCReadResponse(success: true, value: freqGHz)
                         }
                     }
                 }

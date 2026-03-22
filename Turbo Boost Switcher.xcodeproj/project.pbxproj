@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		45CHARTSFRAMEWORK001 /* Charts.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 45CHARTSFRAMEWORK002 /* Charts.framework */; };
+		45CHART001234567800CHART01 /* ChartViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 45CHART001234567800CHART02 /* ChartViews.swift */; };
 		4516CCF7192C12B4008A29A3 /* CheckUpdatesWindowController.m in Sources */ = {isa = PBXBuildFile; fileRef = 4516CCF5192C12B4008A29A3 /* CheckUpdatesWindowController.m */; };
 		4516CCF8192C12B4008A29A3 /* CheckUpdatesWindowController.xib in Resources */ = {isa = PBXBuildFile; fileRef = 4516CCF6192C12B4008A29A3 /* CheckUpdatesWindowController.xib */; };
 		45TBMS001234567800AABB01 /* TurboBoostManager.m in Sources */ = {isa = PBXBuildFile; fileRef = 45TBMS001234567800AABB05 /* TurboBoostManager.m */; };
@@ -120,6 +122,9 @@
 		457FF240179C31EA0029AA66 /* StartupHelper.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = StartupHelper.h; sourceTree = "<group>"; };
 		457FF241179C31EA0029AA66 /* StartupHelper.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = StartupHelper.m; sourceTree = "<group>"; };
 		458BD10927027354004CF8C5 /* HotKeysWindowController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = HotKeysWindowController.h; sourceTree = "<group>"; };
+		45CHARTSFRAMEWORK002 /* Charts.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Charts.framework; path = System/Library/Frameworks/Charts.framework; sourceTree = SDKROOT; };
+		45CHART001234567800CHART02 /* ChartViews.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChartViews.swift; sourceTree = "<group>"; };
+		45CHART001234567800CHART03 /* TurboBoostSwitcher-Bridging-Header.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "TurboBoostSwitcher-Bridging-Header.h"; sourceTree = "<group>"; };
 		458BD10A27027354004CF8C5 /* HotKeysWindowController.xib */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.xib; path = HotKeysWindowController.xib; sourceTree = "<group>"; };
 		458BD10B27027354004CF8C5 /* HotKeysWindowController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = HotKeysWindowController.m; sourceTree = "<group>"; };
 		458EDAAA1799499D00940503 /* Turbo Boost Switcher.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Turbo Boost Switcher.app"; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -169,6 +174,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				45CHARTSFRAMEWORK001 /* Charts.framework in Frameworks */,
 				45B5F61E2464BFC500EC8990 /* Carbon.framework in Frameworks */,
 				4562AE0818F208EE00117CD8 /* ServiceManagement.framework in Frameworks */,
 				4562AE0618F1A54600117CD8 /* Security.framework in Frameworks */,
@@ -300,6 +306,8 @@
 		45D32D3C20A7AF8F00EFB1F7 /* charting */ = {
 			isa = PBXGroup;
 			children = (
+				45CHART001234567800CHART02 /* ChartViews.swift */,
+				45CHART001234567800CHART03 /* TurboBoostSwitcher-Bridging-Header.h */,
 				45D32D3D20A7AFB300EFB1F7 /* ChartDataDelegate.h */,
 				45D32D3E20A7AFB300EFB1F7 /* ChartDataEntry.h */,
 				45D32D3F20A7AFB300EFB1F7 /* ChartDataEntry.m */,
@@ -441,6 +449,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				45CHART001234567800CHART01 /* ChartViews.swift in Sources */,
 				458EDABA1799499D00940503 /* main.m in Sources */,
 				45D32D4520A7AFB300EFB1F7 /* ChartDataEntry.m in Sources */,
 				45D32D4720A7AFB300EFB1F7 /* ChartWindowController.m in Sources */,
@@ -566,6 +575,7 @@
 			buildSettings = {
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
 				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_IDENTITY = "-";
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "-";
 				CODE_SIGN_INJECT_BASE_ENTITLEMENTS = NO;
@@ -582,11 +592,13 @@
 					"$(inherited)",
 					"\"$(SDKROOT)/usr/lib/system\"",
 				);
-				MACOSX_DEPLOYMENT_TARGET = 10.13;
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
 				MARKETING_VERSION = 2.12.0;
 				OTHER_CODE_SIGN_FLAGS = "";
 				PRODUCT_NAME = "Turbo Boost Switcher";
 				PROVISIONING_PROFILE_SPECIFIER = "";
+				SWIFT_OBJC_BRIDGING_HEADER = "Turbo Boost Disabler/TurboBoostSwitcher-Bridging-Header.h";
+				SWIFT_VERSION = 5;
 				WRAPPER_EXTENSION = app;
 			};
 			name = Debug;
@@ -596,6 +608,7 @@
 			buildSettings = {
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
 				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_IDENTITY = "-";
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "-";
 				CODE_SIGN_INJECT_BASE_ENTITLEMENTS = NO;
@@ -612,11 +625,13 @@
 					"$(inherited)",
 					"\"$(SDKROOT)/usr/lib/system\"",
 				);
-				MACOSX_DEPLOYMENT_TARGET = 10.13;
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
 				MARKETING_VERSION = 2.12.0;
 				OTHER_CODE_SIGN_FLAGS = "";
 				PRODUCT_NAME = "Turbo Boost Switcher";
 				PROVISIONING_PROFILE_SPECIFIER = "";
+				SWIFT_OBJC_BRIDGING_HEADER = "Turbo Boost Disabler/TurboBoostSwitcher-Bridging-Header.h";
+				SWIFT_VERSION = 5;
 				WRAPPER_EXTENSION = app;
 			};
 			name = Release;

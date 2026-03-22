@@ -66,6 +66,7 @@
     if (![SystemCommands isModuleLoaded]) {
         NSLog(@"[TurboBoostManager] Kext not loaded, Turbo Boost already enabled");
         self.isTurboBoostEnabled = YES;
+        NSLog(@"[TurboBoostManager] isTurboBoostEnabled set to YES (kext not loaded)");
         if (completion) {
             completion(YES, nil);
         }
@@ -75,8 +76,12 @@
     if (self.useHelper) {
         NSString *kextPath = [self getKextPath:nil];
         [[XPCClientWrapper sharedClient] unloadKextAtPath:kextPath completion:^(BOOL success, NSString * _Nullable errorMessage) {
-            self.isTurboBoostEnabled = success;
-            NSLog(@"[TurboBoostManager] Turbo Boost %@ (XPC)", success ? @"enabled" : @"failed to enable");
+            dispatch_async(dispatch_get_main_queue(), ^{
+                self.isTurboBoostEnabled = success;
+                NSLog(@"[TurboBoostManager] Turbo Boost %@ (XPC), isTurboBoostEnabled=%@", 
+                      success ? @"enabled" : @"failed to enable", 
+                      self.isTurboBoostEnabled ? @"YES" : @"NO");
+            });
             
             if (completion) {
                 NSError *error = nil;
@@ -102,6 +107,7 @@
     if ([SystemCommands isModuleLoaded]) {
         NSLog(@"[TurboBoostManager] Kext already loaded, Turbo Boost already disabled");
         self.isTurboBoostEnabled = NO;
+        NSLog(@"[TurboBoostManager] isTurboBoostEnabled set to NO (kext already loaded)");
         if (completion) {
             completion(YES, nil);
         }
@@ -113,8 +119,12 @@
         NSString *kextPath = [self getKextPath:&is32Bit];
         
         [[XPCClientWrapper sharedClient] loadKextAtPath:kextPath use32Bit:is32Bit completion:^(BOOL success, NSString * _Nullable errorMessage) {
-            self.isTurboBoostEnabled = !success;
-            NSLog(@"[TurboBoostManager] Turbo Boost %@ (XPC)", success ? @"disabled" : @"failed to disable");
+            dispatch_async(dispatch_get_main_queue(), ^{
+                self.isTurboBoostEnabled = !success;
+                NSLog(@"[TurboBoostManager] Turbo Boost %@ (XPC), isTurboBoostEnabled=%@", 
+                      success ? @"disabled" : @"failed to disable", 
+                      self.isTurboBoostEnabled ? @"YES" : @"NO");
+            });
             
             if (completion) {
                 NSError *error = nil;
@@ -167,13 +177,25 @@
                 if (!success) {
                     error = [NSError errorWithDomain:@"TurboBoostManager" code:-1 userInfo:@{NSLocalizedDescriptionKey: errorMessage ?: @"Failed to read CPU frequency"}];
                 }
-                completion(success, value, error);
+                // 确保返回 GHz: 如果值 > 100，说明是 MHz，需要转换
+                float frequencyGHz = value;
+                if (value > 100.0f) {
+                    frequencyGHz = value / 1000.0f;
+                    NSLog(@"[TurboBoostManager] Converted frequency from %.2f MHz to %.2f GHz", value, frequencyGHz);
+                }
+                completion(success, frequencyGHz, error);
             }
         }];
     } else {
         float frequency = [SystemCommands readCurrentCpuFreqWithAuthRef:nil];
         if (completion) {
-            completion(frequency >= 0, frequency, nil);
+            // 确保返回 GHz: 如果值 > 100，说明是 MHz，需要转换
+            float frequencyGHz = frequency;
+            if (frequency > 100.0f) {
+                frequencyGHz = frequency / 1000.0f;
+                NSLog(@"[TurboBoostManager] Converted frequency from %.2f MHz to %.2f GHz", frequency, frequencyGHz);
+            }
+            completion(frequency >= 0, frequencyGHz, nil);
         }
     }
 }

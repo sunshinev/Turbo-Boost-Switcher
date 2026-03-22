@@ -466,17 +466,12 @@ struct cpusample sample_two;
     }
     
     // Refresh the chart view if present
-    ChartDataEntry *fanEntry = [[ChartDataEntry alloc] init];
-    fanEntry.value = fanSpeed;
-    fanEntry.isTbEnabled = [[TurboBoostManager sharedManager] isTurboBoostEnabled];
-    
-    ChartDataEntry *tempEntry = [[ChartDataEntry alloc] init];
-    tempEntry.value = cpuTemp;
-    tempEntry.isTbEnabled = [[TurboBoostManager sharedManager] isTurboBoostEnabled];
+    BOOL isTbEnabled = [[TurboBoostManager sharedManager] isTurboBoostEnabled];
+    NSLog(@"[AppDelegate] updateSensorUI: isTbEnabled=%@", isTbEnabled ? @"YES" : @"NO");
     
     if (self.chartWindowController != nil) {
-        [self.chartWindowController addFanEntry:fanEntry withCurrentValue:rpmData];
-        [self.chartWindowController addTempEntry:tempEntry withCurrentValue:tempString];
+        [self.chartWindowController addFanEntry:fanSpeed withCurrentValue:rpmData isTbEnabled:isTbEnabled];
+        [self.chartWindowController addTempEntry:cpuTemp withCurrentValue:tempString isTbEnabled:isTbEnabled];
     }
 }
 
@@ -511,14 +506,13 @@ struct cpusample sample_two;
     }
     
     // 2.12.0 - Cpu load entry
-    ChartDataEntry *cpuLoadEntry = [[ChartDataEntry alloc] init];
     double finalCpuLoadValue = cpuLoadValue > 0 ? cpuLoadValue : 0;
-    cpuLoadEntry.value = finalCpuLoadValue;
-    cpuLoadEntry.isTbEnabled = [[TurboBoostManager sharedManager] isTurboBoostEnabled];
+    BOOL isTbEnabled = [[TurboBoostManager sharedManager] isTurboBoostEnabled];
+    NSLog(@"[AppDelegate] updateCPULoad: isTbEnabled=%@", isTbEnabled ? @"YES" : @"NO");
         
     if (self.chartWindowController != nil) {
         if (finalCpuLoadValue > 0) {
-            [self.chartWindowController addCpuLoadEntry:cpuLoadEntry withCurrentValue:[NSString stringWithFormat:@"%.01f%%", finalCpuLoadValue]];
+            [self.chartWindowController addCpuLoadEntry:finalCpuLoadValue withCurrentValue:[NSString stringWithFormat:@"%.01f%%", finalCpuLoadValue] isTbEnabled:isTbEnabled];
         }
     }
     
@@ -527,16 +521,11 @@ struct cpusample sample_two;
         __weak typeof(self) weakSelf = self;
         [[TurboBoostManager sharedManager] readCPUFrequencyWithCompletion:^(BOOL success, float frequency, NSError * _Nullable error) {
             dispatch_async(dispatch_get_main_queue(), ^{
+                BOOL tbEnabled = [[TurboBoostManager sharedManager] isTurboBoostEnabled];
                 if (success && frequency > 0) {
-                    ChartDataEntry *cpuFreqEntry = [[ChartDataEntry alloc] init];
-                    cpuFreqEntry.value = frequency;
-                    cpuFreqEntry.isTbEnabled = [[TurboBoostManager sharedManager] isTurboBoostEnabled];
-                    [weakSelf.chartWindowController addCpuFreqEntry:cpuFreqEntry withCurrentValue:[NSString stringWithFormat:@"%.01f Ghz", frequency]];
+                    [weakSelf.chartWindowController addCpuFreqEntry:frequency withCurrentValue:[NSString stringWithFormat:@"%.01f GHz", frequency] isTbEnabled:tbEnabled];
                 } else {
-                    ChartDataEntry *cpuFreqEntry = [[ChartDataEntry alloc] init];
-                    cpuFreqEntry.value = -1.0f;
-                    cpuFreqEntry.isTbEnabled = [[TurboBoostManager sharedManager] isTurboBoostEnabled];
-                    [weakSelf.chartWindowController addCpuFreqEntry:cpuFreqEntry withCurrentValue:@"N/A"];
+                    [weakSelf.chartWindowController addCpuFreqEntry:-1.0 withCurrentValue:@"N/A" isTbEnabled:tbEnabled];
                 }
             });
         }];
