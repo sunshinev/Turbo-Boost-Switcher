@@ -36,13 +36,22 @@ struct ChartEntry: Identifiable {
             
             var newEntries = self.entries
             newEntries.append(entry)
-            if newEntries.count > 60 {
-                newEntries.removeFirst()
-            }
+            
+            // 只保留5分钟内的数据
+            let fiveMinutesAgo = Date().addingTimeInterval(-300)
+            newEntries = newEntries.filter { $0.timestamp >= fiveMinutesAgo }
+            
             self.entries = newEntries
             self.currentValue = currentValue
             
             print("[ChartDataSet] addEntry: title=\(self.title), isTbEnabled=\(isTbEnabled ? "YES" : "NO"), count=\(newEntries.count)")
+        }
+    }
+    
+    @objc public func clearEntries() {
+        DispatchQueue.main.async { [weak self] in
+            self?.entries = []
+            print("[ChartDataSet] clearEntries: title=\(self?.title ?? "unknown")")
         }
     }
 }
@@ -204,6 +213,7 @@ class ChartNSView: NSView {
             let size = attrString.size()
             
             context.setFillColor(NSColor.tertiaryLabelColor.cgColor)
+            context.setLineWidth(0.5)
             context.move(to: CGPoint(x: padding - 5, y: y))
             context.addLine(to: CGPoint(x: bounds.width - 10, y: y))
             context.strokePath()
@@ -348,5 +358,13 @@ struct ChartContainerView: View {
     @objc public func addCpuFreqEntry(_ value: Double, currentValue: String, isTbEnabled: Bool) {
         guard value > 0 else { return }
         cpuFreqDataSet?.addEntry(value: value, currentValue: currentValue, isTbEnabled: isTbEnabled)
+    }
+    
+    @objc public func clearAllData() {
+        tempDataSet?.clearEntries()
+        fanDataSet?.clearEntries()
+        cpuLoadDataSet?.clearEntries()
+        cpuFreqDataSet?.clearEntries()
+        print("[SwiftUIChartManager] All chart data cleared")
     }
 }

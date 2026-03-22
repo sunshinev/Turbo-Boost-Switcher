@@ -27,8 +27,6 @@
     self.window.delegate = self;
     [self.window setTitle:NSLocalizedString(@"titCharting", nil)];
     
-    self.isOpen = YES;
-    
     [self setupSwiftUICharts];
 }
 
@@ -86,6 +84,8 @@
 }
 
 - (IBAction)showWindow:(nullable id)sender {
+    [self.chartManager clearAllData];
+    self.isOpen = YES;
     [super showWindow:sender];
 }
 
