@@ -88,25 +88,12 @@
 
 // Refresh time slider
 - (IBAction) refreshTimeSliderChanged:(id)sender;
-
-// Charts menu click
 - (IBAction) chartsMenuClick:(id) sender;
-
-// Monitoring check click
 - (IBAction) checkMonitoringClick:(id) sender;
-
-// Refresh state after monitoring configuration change
 - (void) updateMonitoringState;
-
 - (void) terminate;
-
-// Relaunch after delay
 - (void)relaunchAfterDelay:(float)seconds;
-
-// Enable / Disable turbo boost depending on current status
 - (void) enableDisableTurboBoost;
-
-// Open chart window
 - (void) openChartWindow;
 
 @property (assign) IBOutlet NSWindow *window;

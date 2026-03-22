@@ -177,6 +177,12 @@ struct cpusample sample_two;
     // Charting menu item
     [chartsMenuItem setTitle:NSLocalizedString(@"menuCharting", nil)];
     
+    // Init the chart window controller
+    if (self.chartWindowController == nil) {
+        self.chartWindowController = [[ChartWindowController alloc] initWithWindowNibName:@"ChartWindowController"];
+        [self.chartWindowController initData];
+    }
+    
     // Update open at login status
     [checkOpenAtLogin setState:[StartupHelper isOpenAtLogin]];
     [checkOpenAtLogin setTitle:NSLocalizedString(@"open_login", nil)];
@@ -205,12 +211,6 @@ struct cpusample sample_two;
     [checkDisableAtLaunch setFont:[statusMenu font]];
     [checkOpenAtLogin setFont:[statusMenu font]];
     [checkMonitoring setFont:[statusMenu font]];
-    
-    // Init the chart window controller
-    if (self.chartWindowController == nil) {
-        self.chartWindowController = [[ChartWindowController alloc] initWithWindowNibName:@"ChartWindowController"];
-        [self.chartWindowController initData];
-    }
     
     // Disable at launch if enabled
     if (([StartupHelper isDisableAtLaunch]) && (![SystemCommands isModuleLoaded])) {
@@ -332,17 +332,15 @@ struct cpusample sample_two;
         });
     }];
     
-    // CPU Load calculation (doesn't require privileges, can stay synchronous)
     [self updateCPULoad];
     
     // Refresh the title string
     [self refreshTitleString];
 }
 
-// Helper method to update sensor UI (only for chart data)
+// Helper method to update sensor UI (for chart data)
 - (void) updateSensorUIWithTemperature:(float)cpuTemp fanSpeed:(int)fanSpeed {
     
-    // Build display strings for chart
     NSString *tempString = nil;
     if (cpuTemp > 0) {
         tempString = [NSString stringWithFormat:@"%.00f ºC", cpuTemp];
@@ -357,12 +355,10 @@ struct cpusample sample_two;
         rpmData = @"N/A";
     }
     
-    // Refresh the chart view if present
     BOOL isTbEnabled = [[TurboBoostManager sharedManager] isTurboBoostEnabled];
     NSLog(@"[AppDelegate] updateSensorUI: isTbEnabled=%@", isTbEnabled ? @"YES" : @"NO");
     
     if (self.chartWindowController != nil) {
-        // Note: Fan chart is being removed, only temp is sent
         [self.chartWindowController addTempEntry:cpuTemp withCurrentValue:tempString isTbEnabled:isTbEnabled];
     }
 }
@@ -371,7 +367,6 @@ struct cpusample sample_two;
 - (void) updateCPULoad {
     
     double cpuLoadValue = -1;
-    // Get the CPU Load
     if (sample_one.totalIdleTime == 0) {
         sample(true);
     } else {
@@ -394,7 +389,6 @@ struct cpusample sample_two;
         cpuLoadValue = 100.0 - cpuIdleValue;
     }
     
-    // Update chart with CPU load data
     double finalCpuLoadValue = cpuLoadValue > 0 ? cpuLoadValue : 0;
     BOOL isTbEnabled = [[TurboBoostManager sharedManager] isTurboBoostEnabled];
     NSLog(@"[AppDelegate] updateCPULoad: isTbEnabled=%@", isTbEnabled ? @"YES" : @"NO");
@@ -405,7 +399,6 @@ struct cpusample sample_two;
         }
     }
     
-    // Update CPU frequency for chart (async)
     if (self.chartWindowController != nil && self.chartWindowController.isOpen) {
         __weak typeof(self) weakSelf = self;
         [[TurboBoostManager sharedManager] readCPUFrequencyWithCompletion:^(BOOL success, float frequency, NSError * _Nullable error) {
@@ -615,7 +608,6 @@ void sample(bool isOne) {
 // Open chart window
 - (void) openChartWindow {
     
-    // Bring window to front
     [NSApp activateIgnoringOtherApps:YES];
     
     if (self.chartWindowController == nil) {
@@ -623,7 +615,6 @@ void sample(bool isOne) {
         [self.chartWindowController initData];
     }
     
-    // Show!
     [self.chartWindowController.window setLevel:NSStatusWindowLevel];
     [self.chartWindowController.window center];
     [self.chartWindowController showWindow:nil];

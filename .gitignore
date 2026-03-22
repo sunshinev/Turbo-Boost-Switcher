@@ -137,3 +137,16 @@ xcuserdata
 .build/
 Package.resolved
 *.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/
+
+# Xcode index and derived data (alternative locations)
+*.noindex/
+Index.noindex/
+deriveddata*/
+*.xcuserstate
+
+# Build archives (timestamped folders)
+Turbo Boost Disabler/Turbo Boost Switcher */
+
+# IDE
+.vscode/
+.idea/

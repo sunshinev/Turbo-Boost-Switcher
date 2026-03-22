@@ -706,13 +706,6 @@
                     </connections>
                 </menuItem>
                 <menuItem isSeparatorItem="YES" id="gYO-mG-taB"/>
-                <menuItem title="Item" id="L57-Oh-ely">
-                    <modifierMask key="keyEquivalentModifierMask"/>
-                    <connections>
-                        <outlet property="view" destination="YNw-n5-v8Y" id="nDW-PV-yso"/>
-                    </connections>
-                </menuItem>
-                <menuItem isSeparatorItem="YES" id="MeR-dB-52w"/>
                 <menuItem title="Settings..." id="593">
                     <modifierMask key="keyEquivalentModifierMask"/>
                     <connections>
@@ -730,86 +723,20 @@
                                     <action selector="languageChanged:" target="494" id="7Bm-AW-DnW"/>
                                 </connections>
                             </menuItem>
-                            <menuItem title="Spanish" id="qdP-PK-KXG">
-                                <modifierMask key="keyEquivalentModifierMask"/>
-                                <connections>
-                                    <action selector="languageChanged:" target="494" id="YJ9-6u-DiP"/>
-                                </connections>
-                            </menuItem>
-                            <menuItem title="Polish (beta)" id="aNR-Nk-YzI">
-                                <modifierMask key="keyEquivalentModifierMask"/>
-                                <connections>
-                                    <action selector="languageChanged:" target="494" id="Fdm-4G-gHu"/>
-                                </connections>
-                            </menuItem>
-                            <menuItem title="German (beta)" id="897-TB-g2a">
-                                <modifierMask key="keyEquivalentModifierMask"/>
-                                <connections>
-                                    <action selector="languageChanged:" target="494" id="va8-EA-flh"/>
-                                </connections>
-                            </menuItem>
-                            <menuItem title="French (beta)" id="7pm-dC-N4m">
-                                <modifierMask key="keyEquivalentModifierMask"/>
-                                <connections>
-                                    <action selector="languageChanged:" target="494" id="S3R-Gg-N4o"/>
-                                </connections>
-                            </menuItem>
-                            <menuItem title="Russian (beta)" id="MNJ-MC-Tz5">
-                                <modifierMask key="keyEquivalentModifierMask"/>
-                                <connections>
-                                    <action selector="languageChanged:" target="494" id="gBP-Te-Hqj"/>
-                                </connections>
-                            </menuItem>
                             <menuItem title="Chinese (beta)" id="FNR-nU-o96">
                                 <modifierMask key="keyEquivalentModifierMask"/>
                                 <connections>
                                     <action selector="languageChanged:" target="494" id="0gY-KT-j62"/>
                                 </connections>
                             </menuItem>
-                            <menuItem title="Swedish (beta)" id="4Gl-3T-SvN">
-                                <modifierMask key="keyEquivalentModifierMask"/>
-                                <connections>
-                                    <action selector="languageChanged:" target="494" id="EwL-OQ-f3f"/>
-                                </connections>
-                            </menuItem>
-                            <menuItem title="Czech (beta)" id="D1S-mD-pq7">
-                                <modifierMask key="keyEquivalentModifierMask"/>
-                                <connections>
-                                    <action selector="languageChanged:" target="494" id="QeV-My-gth"/>
-                                </connections>
-                            </menuItem>
-                            <menuItem title="Italian (beta)" id="nTb-KD-Dsg">
-                                <modifierMask key="keyEquivalentModifierMask"/>
-                                <connections>
-                                    <action selector="languageChanged:" target="494" id="2Js-nk-TPG"/>
-                                </connections>
-                            </menuItem>
                         </items>
                     </menu>
-                </menuItem>
-                <menuItem title="Hotkeys..." id="P0Q-xM-jLa">
-                    <modifierMask key="keyEquivalentModifierMask"/>
-                    <connections>
-                        <action selector="hotKeysPressed:" target="-1" id="FBB-s3-0I1"/>
-                    </connections>
                 </menuItem>
                 <menuItem isSeparatorItem="YES" id="MtI-lp-nhZ"/>
                 <menuItem title="About..." id="556">
                     <modifierMask key="keyEquivalentModifierMask"/>
                     <connections>
                         <action selector="about:" target="494" id="565"/>
-                    </connections>
-                </menuItem>
-                <menuItem title="Help..." id="Q8h-hw-kJ7">
-                    <modifierMask key="keyEquivalentModifierMask"/>
-                    <connections>
-                        <action selector="help:" target="494" id="a2f-8l-nrM"/>
-                    </connections>
-                </menuItem>
-                <menuItem title="Check Updates..." id="564">
-                    <modifierMask key="keyEquivalentModifierMask"/>
-                    <connections>
-                        <action selector="checkForUpdates:" target="494" id="570"/>
                     </connections>
                 </menuItem>
                 <menuItem isSeparatorItem="YES" id="LXX-oe-Hxb"/>
